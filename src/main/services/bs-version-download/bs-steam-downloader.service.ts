@@ -71,6 +71,7 @@ export class BsSteamDownloaderService {
         const exePath = this.getDepotDownloaderExePath();
         const args = DepotDownloader.buildArgs(depotDownloaderOptions);
 
+        log.info("DEBUG DepotDownloader absolute path", exePath);
         const depotDownloader = new DepotDownloader({
             command: exePath,
             args,
