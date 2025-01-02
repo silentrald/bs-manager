@@ -52,6 +52,9 @@ export class WindowManagerService {
             return { action: "deny"}
         });
 
+        window.webContents.openDevTools();
+
+
         window.removeMenu();
         window.setMenu(null);
 
@@ -62,7 +65,6 @@ export class WindowManagerService {
                 throw new Error('"window" is not defined');
             }
             window.show();
-            window.webContents.openDevTools();
         });
 
         return promise.then(() => window);

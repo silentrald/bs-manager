@@ -47,7 +47,10 @@ export function ModsSlide({ version, onDisclamerDecline }: { version: BSVersion;
         }
         const map = new Map<BbmCategories, BbmFullMod[]>();
         mods.forEach(mod => map.set(mod.mod.category, [...(map.get(mod.mod.category) ?? []), mod]));
-        logRenderError(mods);
+
+        console.info("MARKER setting category mods to", map);
+        logRenderError("MARKER setting category mods to", map);
+
         return map;
     };
 
@@ -107,12 +110,16 @@ export function ModsSlide({ version, onDisclamerDecline }: { version: BSVersion;
             lastValueFrom(modsManager.getAvailableMods(version)),
             lastValueFrom(modsManager.getInstalledMods(version))
         ]).then(([available, installed]) => {
+            console.info("MARKER available installed", available, installed);
+            logRenderError("MARKER available installed", available, installed);
+
             const defaultMods = installed?.length ? [] : available.filter(m => m.mod.category === BbmCategories.Core || m.mod.category === BbmCategories.Essential);
             setModsAvailable(modsToCategoryMap(available));
             const installedMods: BbmFullMod[] = installed.map(version => {
                 const mod = available.find(m => m.mod.id === version.modId);
                 return mod ? { ...mod, version } : null;
             });
+            console.info("MARKER setting");
             setModsSelected(available.filter(m => m.mod.category === BbmCategories.Core || defaultMods.some(d => m.mod.name.toLowerCase() === d.mod.name.toLowerCase()) || installedMods.some(i => m.mod.id === i.mod.id)));
             setModsInstalled(modsToCategoryMap(installedMods));
         });
