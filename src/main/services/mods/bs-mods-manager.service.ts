@@ -64,7 +64,10 @@ export class BsModsManagerService {
         const bsPath = await this.bsLocalService.getVersionPath(version);
         const modsPath = path.join(bsPath, modsDir);
 
+        log.info("MARKER getModsInDir", modsPath);
+
         if (!pathExistsSync(modsPath)) {
+            log.info("MARKER modsPath does not exist");
             return [];
         }
 
@@ -102,6 +105,9 @@ export class BsModsManagerService {
         });
 
         const mods = await Promise.all(promises);
+
+        log.info("MARKER filtered mods", mods.filter(Boolean));
+
         return  mods.filter(Boolean);
     }
 
@@ -307,6 +313,8 @@ export class BsModsManagerService {
     }
 
     public async getInstalledMods(version: BSVersion): Promise<BbmModVersion[]> {
+        log.info("MARKER getInstalledMods");
+
         this.manifestMatches = [];
 
         const bsipa = await this.getBsipaInstalled(version);
@@ -315,6 +323,8 @@ export class BsModsManagerService {
         const libsMods = await Promise.all([this.getModsInDir(version, ModsInstallFolder.LIBS), this.getModsInDir(version, ModsInstallFolder.LIBS_PENDING)]);
 
         const dirMods = pluginsMods.flat().concat(libsMods.flat());
+
+        log.info("MARKER got mods", pluginsMods, libsMods, dirMods);
 
         const modsDict = new Map<number, BbmModVersion>();
 

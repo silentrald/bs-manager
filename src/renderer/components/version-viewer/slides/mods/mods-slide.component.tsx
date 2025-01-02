@@ -18,6 +18,7 @@ import { ModsDisclaimerModal } from "renderer/components/modal/modal-types/mods-
 import { OsDiagnosticService } from "renderer/services/os-diagnostic.service";
 import { lt } from "semver";
 import { useService } from "renderer/hooks/use-service.hook";
+import { logRenderError } from "renderer";
 
 export function ModsSlide({ version, onDisclamerDecline }: { version: BSVersion; onDisclamerDecline: () => void }) {
     const ACCEPTED_DISCLAIMER_KEY = "accepted-mods-disclaimer";
@@ -46,6 +47,7 @@ export function ModsSlide({ version, onDisclamerDecline }: { version: BSVersion;
         }
         const map = new Map<BbmCategories, BbmFullMod[]>();
         mods.forEach(mod => map.set(mod.mod.category, [...(map.get(mod.mod.category) ?? []), mod]));
+        logRenderError(mods);
         return map;
     };
 

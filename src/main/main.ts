@@ -26,7 +26,8 @@ import { readdirSync, statSync, unlinkSync } from "fs-extra";
 export const filterStrings = new Set<string>();
 export const filterPatterns = new Set<RegExp>();
 
-const isDebug = process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true";
+// const isDebug = process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true";
+const isDebug = true;
 
 // Filter all occulus tokens
 filterPatterns.add(/FRL\S{10,}/g);

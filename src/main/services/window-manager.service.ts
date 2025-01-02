@@ -10,7 +10,8 @@ export class WindowManagerService {
     private static instance: WindowManagerService;
 
     private readonly PRELOAD_PATH = app.isPackaged ? path.join(__dirname, "preload.js") : path.join(__dirname, "../../../.erb/dll/preload.js");
-    private readonly IS_DEBUG = process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true"
+    // private readonly IS_DEBUG = process.env.NODE_ENV === "development" || process.env.DEBUG_PROD === "true"
+    private readonly IS_DEBUG = true;
 
     private readonly utilsService: UtilsService = UtilsService.getInstance();
 
@@ -47,7 +48,7 @@ export class WindowManagerService {
             if(isValidUrl(url)){
                 shell.openExternal(url);
             }
-            
+
             return { action: "deny"}
         });
 
@@ -61,6 +62,7 @@ export class WindowManagerService {
                 throw new Error('"window" is not defined');
             }
             window.show();
+            window.webContents.openDevTools();
         });
 
         return promise.then(() => window);
