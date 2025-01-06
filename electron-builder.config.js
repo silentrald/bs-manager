@@ -1,3 +1,5 @@
+const { BS_APP_ID } = require("main/constants");
+
 const config = {
     extraResources: [
         "./assets/jsons/bs-versions.json",
@@ -69,6 +71,8 @@ const config = {
             "--filesystem=~/.steam/steam/steamapps:ro", // for the libraryfolders.vdf
             "--filesystem=~/.steam/steam/steamapps/common:create", // Steam game folder
             "--filesystem=~/.steam/steam/steamapps/common/Beat Saber:create", // For installing mods/maps to original Beat Saber version
+            // Allow BSManager to create the compat folder if it does not exist
+            `--filesystem=~/.steam/steam/steamapps/compatdata/${BS_APP_ID}:create`,
             // Allow communication with network
             "--share=network",
             // System notifications with libnotify
