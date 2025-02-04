@@ -58,7 +58,7 @@ export class OculusLauncherService extends AbstractLauncherService implements St
                 const process = this.launchBs(
                     exePath,
                     buildBsLaunchArgs(launchOptions),
-                    { env }
+                    { env, cwd: bsPath }
                 );
 
                 return process.exit.catch(err => {
