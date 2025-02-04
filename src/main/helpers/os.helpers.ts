@@ -21,6 +21,7 @@ type FlatpakOptions = {
 export enum BsmShellLog {
     Command = 0x0000_0001,
     EnvVariables = 0x0000_0002,
+    Options = 0x0000_0004,
 };
 
 interface BsmShellOptions<OptionsType> {
@@ -70,6 +71,12 @@ function logValues(shell: "spawn" | "exec", command: string, options?: BsmShellO
 
     if ((optionsLog & BsmShellLog.EnvVariables) > 0) {
         log.info(platform, shell, "env", options?.options?.env);
+    }
+
+    if ((optionsLog & BsmShellLog.Options) > 0) {
+        const copiedOpts = { ...(options?.options || {}) };
+        delete copiedOpts.env;
+        log.info(platform, shell, "env", copiedOpts);
     }
 
     if ((optionsLog & BsmShellLog.Command) > 0) {

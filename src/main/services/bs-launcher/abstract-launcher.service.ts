@@ -59,7 +59,7 @@ export abstract class AbstractLauncherService {
 
         spawnOptions.shell = true; // For windows to spawn properly
         return bsmSpawn(`"${bsExePath}"`, {
-            args, options: spawnOptions, log: BsmShellLog.Command,
+            args, options: spawnOptions, log: BsmShellLog.Command | BsmShellLog.Options,
             linux: { prefix: options?.protonPrefix || "" },
             flatpak: {
                 host: IS_FLATPAK,
