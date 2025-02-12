@@ -4,8 +4,8 @@ name: Build
 
 on:
     push:
-        branches: ["master"]
-    workflow_dispatch:
+        # branches: ["master"]
+    # workflow_dispatch:
 
 jobs:
     release:
@@ -13,7 +13,7 @@ jobs:
 
         strategy:
             matrix:
-                os: [windows-latest, ubuntu-latest]
+                os: [ubuntu-latest]
 
         steps:
             - name: Check out Git repository
@@ -27,27 +27,24 @@ jobs:
 
             # Update package lists
             - name: update apt-get
-              if: matrix.os == 'ubuntu-latest'
               run: sudo apt-get update
 
-            # Install and setup rpm/Flatpak for Ubuntu
-            - name: Install rpm/flatpak packages (Ubuntu only)
-              if: matrix.os == 'ubuntu-latest'
-              run: sudo apt-get install -y flatpak flatpak-builder rpm libarchive-tools
+            # Install and setup Flatpak for Ubuntu
+            - name: Install flatpak packages (Ubuntu only)
+              run: sudo apt-get install -y flatpak flatpak-builder
 
             - run: npm ci
-            - run: npm run package
+            # - run: npm run package
 
             - name: Setup flatpak repo (Ubuntu only)
-              if: matrix.os == 'ubuntu-latest'
               run: |
                 flatpak remote-add --if-not-exists --user \
                   flathub https://flathub.org/repo/flathub.flatpakrepo
 
             # Build Flatpak package
             - name: Build Flatpak (Ubuntu only)
-              if: matrix.os == 'ubuntu-latest'
               run: |
+                  npm run build && \
                   env DEBUG="@malept/flatpak-bundler" \
                   npx electron-builder --config electron-builder.config.js --publish never --linux flatpak
 
