@@ -31,7 +31,7 @@ const createMockMapFiles = async (
     end: number
 ): Promise<void> => {
     for (let i = start; i < end; ++i) {
-        const folderPath = path.join(folder, `map-${i.toString().padStart(2, "0")}`);
+        const folderPath = path.join(folder, `map-${i.toString().padStart(4, "0")}`);
         await mkdir(folderPath, { recursive: true });
 
         for (let j = 0; j < 3; ++j) {
@@ -45,9 +45,9 @@ describe("Folder Linker Service", () => {
 
     beforeAll(async () => {
         await rm(OUTPUT_FOLDER, { force: true, recursive: true });
-        await createMockMapFiles(SHARED_CUSTOM_LEVELS_FOLDER, 0, 50);
-        await createMockMapFiles(VERSION_FOLDER, 50, 100);
-    });
+        await createMockMapFiles(SHARED_CUSTOM_LEVELS_FOLDER, 0, 5000);
+        await createMockMapFiles(VERSION_FOLDER, 5000, 10_000);
+    }, 60_000); // 1min
 
     afterAll(async () => {
         await rm(OUTPUT_FOLDER, { force: true, recursive: true });
@@ -61,7 +61,7 @@ describe("Folder Linker Service", () => {
 
         for (const folder of [ SHARED_CUSTOM_LEVELS_FOLDER, VERSION_FOLDER ]) {
             const mapFolders = await readdir(folder, { withFileTypes: true });
-            expect(mapFolders.length).toBe(100);
+            expect(mapFolders.length).toBe(10_000);
 
             for (const map of mapFolders) {
                 const mapPath = path.join(folder, path.basename(map.name));
@@ -69,7 +69,7 @@ describe("Folder Linker Service", () => {
                 expect(contents.length).toBe(3);
             }
         }
-    });
+    }, 60_000); // 1min
 
 });
 
