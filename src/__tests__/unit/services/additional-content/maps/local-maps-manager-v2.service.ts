@@ -24,6 +24,8 @@ const localMapsManagerV2 = createLocalMapsManagerServiceV2({
         getVersionPath: async () => VERSION_FOLDER,
     },
     installLocationService: {
+        // Unused in testing
+        installationDirectory: () => "",
         sharedContentPath: () => SHARED_FOLDER,
     },
     songCacheService: {

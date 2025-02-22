@@ -4,8 +4,9 @@ import { VersionLinkerAction, VersionUnlinkFolderAction } from "renderer/service
 import { BSVersion } from "shared/bs-version.interface";
 import { LocalMapsManagerService } from "./additional-content/maps/local-maps-manager.service";
 import { BSLocalVersionService } from "./bs-local-version.service";
-import { FolderLinkerService, LinkOptions } from "./folder-linker.service";
+import { FolderLinkerService } from "./folder-linker.service";
 import { allSettled } from "../../shared/helpers/promise.helpers";
+import { LinkOptions } from "./types";
 
 export class VersionFolderLinkerService {
     private static instance: VersionFolderLinkerService;

@@ -1,4 +1,4 @@
-import { LinkOptions, UnlinkOptions } from "main/services/folder-linker.service";
+import { UnlinkOptions } from "main/services/folder-linker.service";
 import { map, distinctUntilChanged, filter, mergeMap, shareReplay } from "rxjs/operators";
 import { BehaviorSubject, lastValueFrom, Observable, of } from "rxjs";
 import { BSVersion } from "shared/bs-version.interface";
@@ -8,6 +8,7 @@ import equal from "fast-deep-equal";
 import { tryit } from "shared/helpers/error.helpers";
 import { NotificationService } from "./notification.service";
 import { CustomError } from "shared/models/exceptions/custom-error.class";
+import { LinkOptions } from "main/services/types";
 
 
 

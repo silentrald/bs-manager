@@ -14,6 +14,7 @@ const localMapsManagerServiceV2 = createLocalMapsManagerServiceV2({
         getVersionPath: async (version) => localVersionService.getVersionPath(version),
     },
     installLocationService: {
+        installationDirectory: () => installLocationService.installationDirectory(),
         sharedContentPath: () => installLocationService.sharedContentPath(),
     },
     songCacheService: {

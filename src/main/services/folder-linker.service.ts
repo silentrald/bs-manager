@@ -1,15 +1,12 @@
-import { InstallationLocationService } from "./installation-location.service";
 import log from "electron-log";
-import { deleteFileSync, deleteFolder, deleteFolderSync, ensureFolderExist, moveFolderContent, pathExist } from "../helpers/fs.helpers";
-import { lstat, symlink } from "fs/promises";
+import { deleteFolder, ensureFolderExist, moveFolderContent, pathExist } from "../helpers/fs.helpers";
 import path from "path";
-import { copy, mkdirSync, readlink, symlinkSync } from "fs-extra";
+import { copy } from "fs-extra";
 import { lastValueFrom } from "rxjs";
 import { noop } from "shared/helpers/function.helpers";
 import { StaticConfigurationService } from "./static-configuration.service";
-import { randomUUID } from "crypto";
-import { CustomError } from "shared/models/exceptions/custom-error.class";
-import { tryit } from "shared/helpers/error.helpers";
+import { FolderLinkerServiceV2, LinkOptions } from "./types";
+import { folderLinkerServiceV2 } from ".";
 
 export class FolderLinkerService {
     private static instance: FolderLinkerService;
@@ -21,7 +18,7 @@ export class FolderLinkerService {
         return FolderLinkerService.instance;
     }
 
-    private readonly installLocationService = InstallationLocationService.getInstance();
+    private readonly selfV2: FolderLinkerServiceV2;
     private readonly staticConfig: StaticConfigurationService;
 
     // Only Windows support "junction", this is disregarded in other os'es
@@ -29,7 +26,7 @@ export class FolderLinkerService {
         process.platform === "win32" ? "junction" : "symlink";
 
     private constructor() {
-        this.installLocationService = InstallationLocationService.getInstance();
+        this.selfV2 = folderLinkerServiceV2;
         this.staticConfig = StaticConfigurationService.getInstance();
 
         if (process.platform === "win32") {
@@ -45,30 +42,14 @@ export class FolderLinkerService {
     }
 
     public isLinkingSupported(): boolean {
-        const uuid = randomUUID();
-        const installationPath = this.installLocationService.installationDirectory();
-        const testFolder = path.join(installationPath, uuid);
-        const testLink = path.join(installationPath, `${uuid}_link`);
-
-        const resLink = tryit(() => {
-            mkdirSync(testFolder);
-            symlinkSync(testFolder, testLink, this.getLinkingType());
-        });
-
-        tryit(() => {
-            deleteFolderSync(testFolder);
-            deleteFileSync(testLink);
-        });
-
-        if(resLink.error){
-            log.error("Unable to create symlink", resLink.error);
-        }
-
-        return !resLink.error;
+        return this.selfV2.isLinkingSupported();
     }
 
+    /**
+     * @deprecated use InstallationLocationService.sharedContentPath()
+     */
     public sharedFolder(): string {
-        return this.installLocationService.sharedContentPath();
+        return this.selfV2.sharedFolder();
     }
 
     private async getSharedFolder(folderPath: string, intermediateFolder?: string): Promise<string> {
@@ -77,13 +58,6 @@ export class FolderLinkerService {
 
     private getBackupFolder(folderPath: string): string {
         return `${folderPath}_backup`;
-    }
-
-    private async backupFolder(folderPath: string): Promise<void> {
-        if (!(await pathExist(folderPath))) {
-            return;
-        }
-        return copy(folderPath, this.getBackupFolder(folderPath), { overwrite: true, errorOnExist: false });
     }
 
     private async restoreFolder(folderPath: string): Promise<void> {
@@ -95,46 +69,8 @@ export class FolderLinkerService {
         });
     }
 
-    private getLinkingType(): "junction" | undefined {
-        return this.linkingType === "junction" ? "junction" : undefined;
-    }
-
     public async linkFolder(folderPath: string, options?: LinkOptions): Promise<void> {
-        if(!this.isLinkingSupported()){
-            throw new CustomError("Linking is not supported on this platform", "LinkingNotSupported");
-        }
-
-        const sharedPath = await this.getSharedFolder(folderPath, options?.intermediateFolder);
-
-        if (await this.isFolderSymlink(folderPath)) {
-            const isTargetedToSharedPath = await readlink(folderPath)
-                .then(target => target === sharedPath)
-                .catch(() => false);
-            if (isTargetedToSharedPath) {
-                return;
-            }
-            await deleteFolder(folderPath);
-
-            log.info(`Linking ${folderPath} to ${sharedPath}; type: ${this.linkingType}`);
-            return symlink(sharedPath, folderPath, this.getLinkingType());
-        }
-
-        await ensureFolderExist(sharedPath);
-
-        if (options?.backup === true) {
-            await this.backupFolder(folderPath);
-        }
-
-        await ensureFolderExist(folderPath);
-
-        if (options?.keepContents !== false) {
-            await lastValueFrom(moveFolderContent(folderPath, sharedPath, { overwrite: true }));
-        }
-
-        await deleteFolder(folderPath);
-
-        log.info(`Linking ${folderPath} to ${sharedPath}; type: ${this.linkingType}`);
-        return symlink(sharedPath, folderPath, this.getLinkingType());
+        return this.selfV2.linkFolder(folderPath, options);
     }
 
     public async unlinkFolder(folderPath: string, options?: UnlinkOptions): Promise<void> {
@@ -165,22 +101,8 @@ export class FolderLinkerService {
     }
 
     public async isFolderSymlink(folder: string): Promise<boolean> {
-        try {
-            if (!(await pathExist(folder))) {
-                return false;
-            }
-            return await lstat(folder).then(stat => stat.isSymbolicLink());
-        } catch (e) {
-            log.error(e);
-        }
-        return false;
+        return this.selfV2.isFolderSymlink(folder);
     }
-}
-
-export interface LinkOptions {
-    keepContents?: boolean;
-    intermediateFolder?: string;
-    backup?: boolean;
 }
 
 export interface UnlinkOptions extends LinkOptions {
