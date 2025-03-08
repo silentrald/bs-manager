@@ -27,7 +27,7 @@ jest.mock("electron-log", () => ({
 
 jest.mock("ps-list", () => (): unknown[] => []);
 
-const IS_WINDOWS = process.platform === "win32";
+// const IS_WINDOWS = process.platform === "win32";
 const IS_LINUX = process.platform === "linux";
 
 describe("Test os.helpers bsmSpawn", () => {
@@ -89,14 +89,14 @@ describe("Test os.helpers bsmSpawn", () => {
     it("Complex spawn command call (Mods install)", () => {
         bsmSpawn(`"./BSIPA.exe" "./Beat Saber.exe" -n`, {
             log: BsmShellLog.Command,
-            linux: { prefix: `"./wine64"` },
+            prefix: IS_LINUX && `"./wine64"`,
         });
 
         expect(spawnSpy).toHaveBeenCalledTimes(1);
         expect(spawnSpy).toHaveBeenCalledWith(
-            process.platform === "win32"
-                ? `"./BSIPA.exe" "./Beat Saber.exe" -n`
-                : `"./wine64" "./BSIPA.exe" "./Beat Saber.exe" -n`,
+           IS_LINUX
+                ? `"./wine64" "./BSIPA.exe" "./Beat Saber.exe" -n`
+                : `"./BSIPA.exe" "./Beat Saber.exe" -n`,
             expect.anything()
         );
 
@@ -112,14 +112,14 @@ describe("Test os.helpers bsmSpawn", () => {
                 env: BS_ENV,
             },
             log: BsmShellLog.Command,
-            linux: { prefix: `"./proton" run` },
+            prefix: IS_LINUX && `"./proton" run`,
         });
 
         expect(spawnSpy).toHaveBeenCalledTimes(1);
         expect(spawnSpy).toHaveBeenCalledWith(
-            IS_WINDOWS
-                ? `"./Beat Saber.exe" --no-yeet fpfc`
-                : `"./proton" run "./Beat Saber.exe" --no-yeet fpfc`,
+            IS_LINUX
+                ? `"./proton" run "./Beat Saber.exe" --no-yeet fpfc`
+                : `"./Beat Saber.exe" --no-yeet fpfc`,
             expect.objectContaining({
                 cwd: "/",
                 detached: true,
@@ -131,17 +131,6 @@ describe("Test os.helpers bsmSpawn", () => {
     });
 
     ifIt(IS_LINUX)("Complex spawn command call (BS launch flatpak)", () => {
-        const flatpakEnv = [
-            "SteamAppId",
-            "SteamOverlayGameId",
-            "SteamGameId",
-            "WINEDLLOVERRIDES",
-            "STEAM_COMPAT_DATA_PATH",
-            "STEAM_COMPAT_INSTALL_PATH",
-            "STEAM_COMPAT_CLIENT_INSTALL_PATH",
-            "STEAM_COMPAT_APP_ID",
-            "SteamEnv"
-        ];
         const newEnv = {
             ...BS_ENV,
             something: "else",
@@ -155,17 +144,18 @@ describe("Test os.helpers bsmSpawn", () => {
                 env: newEnv,
             },
             log: BsmShellLog.Command,
-            linux: { prefix: `"./proton" run` },
+            prefix: `"./proton" run`,
             flatpak: {
                 host: true,
-                env: flatpakEnv,
             },
         });
 
         expect(spawnSpy).toHaveBeenCalledTimes(1);
-        const envArgs = flatpakEnv.map(argName =>
-                `--env=${argName}="${(BS_ENV as any)[argName]}"`
-            ).join(" ");
+        const envArgs = Object.entries(newEnv)
+            .map(([key, value]) =>
+                 `--env=${key}="${value}"`
+            )
+            .join(" ");
         expect(spawnSpy).toHaveBeenCalledWith(
             `flatpak-spawn --host ${envArgs} "./proton" run "./Beat Saber.exe" --no-yeet fpfc`,
             expect.objectContaining({

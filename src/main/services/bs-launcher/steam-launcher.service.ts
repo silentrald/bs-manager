@@ -4,7 +4,7 @@ import { StoreLauncherInterface } from "./store-launcher.interface";
 import { pathExists, rename } from "fs-extra";
 import { SteamService } from "../steam.service";
 import path from "path";
-import { BS_APP_ID, BS_EXECUTABLE, STEAMVR_APP_ID } from "../../constants";
+import { BS_APP_ID, BS_EXECUTABLE, COMMAND_FORMAT, STEAMVR_APP_ID } from "../../constants";
 import log from "electron-log";
 import { AbstractLauncherService, buildBsLaunchArgs } from "./abstract-launcher.service";
 import { CustomError } from "../../../shared/models/exceptions/custom-error.class";
@@ -111,17 +111,27 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
                 "SteamGameId": BS_APP_ID,
             };
 
-            let protonPrefix = "";
+            let prefix = "";
             // Linux setup
             if (process.platform === "linux") {
                 const linuxSetup = await this.linux.setupLaunch(
                     launchOptions, steamPath, bsFolderPath
                 );
-                protonPrefix = linuxSetup.protonPrefix;
+                prefix = linuxSetup.protonPrefix;
                 Object.assign(env, linuxSetup.env);
             }
 
             this.injectAdditionalArgsEnvs(launchOptions, env);
+
+            if (launchOptions.command) {
+                const index = launchOptions.command.indexOf(COMMAND_FORMAT);
+                if (index > -1) {
+                    prefix = `${launchOptions.command.substring(0, index)} ${prefix}`;
+                    launchOptions.command = launchOptions.command
+                        .substring(index + COMMAND_FORMAT.length);
+                }
+            }
+
             const launchArgs = buildBsLaunchArgs(launchOptions);
 
             obs.next({type: BSLaunchEvent.BS_LAUNCHING});
@@ -129,9 +139,11 @@ export class SteamLauncherService extends AbstractLauncherService implements Sto
             const spawnOpts = { env, cwd: bsFolderPath };
 
             const launchPromise = !launchOptions.admin ? (
-                this.launchBs(bsExePath, launchArgs, {
-                    ...spawnOpts,
-                    protonPrefix
+                this.launchBs({
+                    bsExePath,
+                    args: launchArgs,
+                    prefix,
+                    options: spawnOpts,
                 }).exit
             ) : (
                 new Promise<number>(resolve => {

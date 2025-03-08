@@ -3,19 +3,10 @@ import log from "electron-log";
 import psList from "ps-list";
 import { IS_FLATPAK } from "main/constants";
 
-type LinuxOptions = {
-    // Add the prefix to the command
-    //   eg. command - "./Beat Saber.exe" --no-yeet, prefix - "path/to/proton" run
-    //     = "path/to/proton" run "./Beat Saber.exe" --no-yeet
-    prefix: string;
-};
-
 // Only applied if package as flatpak
 type FlatpakOptions = {
     // Force to use "flatpak-spawn --host" to run commands outside of the sandbox
     host: boolean;
-    // Only copy the keys from options.env from bsmSpawn/bsmExec
-    env?: string[];
 };
 
 export enum BsmShellLog {
@@ -24,11 +15,14 @@ export enum BsmShellLog {
 };
 
 interface BsmShellOptions<OptionsType> {
+    // Add the prefix to the command
+    //   eg. command - "./Beat Saber.exe" --no-yeet, prefix - "path/to/proton" run
+    //     = "path/to/proton" run "./Beat Saber.exe" --no-yeet
+    prefix?: string;
     args?: string[];
     options?: OptionsType;
     // Look into BsmShellLog values
     log?: number;
-    linux?: LinuxOptions;
     flatpak?: FlatpakOptions;
 };
 
@@ -36,6 +30,10 @@ export type BsmSpawnOptions = BsmShellOptions<cp.SpawnOptions>;
 export type BsmExecOptions = BsmShellOptions<cp.ExecOptions>;
 
 function updateCommand(command: string, options: BsmSpawnOptions) {
+    if (options.prefix) {
+        command = `${options.prefix} ${command}`;
+    }
+
     if (options?.args) {
         command += ` ${options.args.join(" ")}`;
     }
@@ -45,17 +43,9 @@ function updateCommand(command: string, options: BsmSpawnOptions) {
         // All distros should support "bash" by default
         options.options.shell = "bash";
 
-        if (options.linux?.prefix) {
-            command = `${options.linux.prefix} ${command}`;
-        }
-
         if (options?.flatpak?.host) {
-            const envArgs = (options?.flatpak?.env && options?.options?.env)
-                && options.flatpak.env
-                    .filter(envName => options.options.env[envName])
-                    .map(envName =>
-                         `--env=${envName}="${options.options.env[envName]}"`
-                    )
+            const envArgs = Object.entries(options?.options?.env || {})
+                    .map(([key, value]) => `--env=${key}="${value}"`)
                     .join(" ");
             command = `flatpak-spawn --host ${envArgs || ""} ${command}`;
         }

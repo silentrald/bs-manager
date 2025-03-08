@@ -17,7 +17,7 @@ import { LinuxService } from "../linux.service";
 import { tryit } from "shared/helpers/error.helpers";
 import crypto from "crypto";
 import { BsmZipExtractor } from "main/models/bsm-zip-extractor.class";
-import { BsmShellLog, bsmSpawn } from "main/helpers/os.helpers";
+import { BsmShellLog, bsmSpawn, BsmSpawnOptions } from "main/helpers/os.helpers";
 import { BbmFullMod, BbmModVersion, ExternalMod } from "../../../shared/models/mods/mod.interface";
 
 export class BsModsManagerService {
@@ -145,9 +145,16 @@ export class BsModsManagerService {
             return false;
         }
 
-        const env: Record<string, string> = {};
-        const cmd = `"${ipaPath}" "${bsExePath}" ${args.join(" ")}`;
-        let winePath: string = "";
+        const spawnOptions: BsmSpawnOptions = {
+            log: BsmShellLog.Command | BsmShellLog.EnvVariables,
+            options: {
+                cwd: versionPath,
+                detached: true,
+                shell: true,
+                env: {}
+            },
+        };
+
         if (process.platform === "linux") {
             const { error: winePathError, result: winePathResult } =
                 tryit(() => this.linuxService.getWinePath());
@@ -155,26 +162,20 @@ export class BsModsManagerService {
                 log.error(winePathError);
                 return false;
             }
-            winePath = `"${winePathResult}"`;
+            spawnOptions.prefix = `"${winePathResult}"`;
 
             const winePrefix = this.linuxService.getWinePrefixPath();
             if (!winePrefix) {
                 throw new CustomError("Could not find BSManager WINEPREFIX path", "no-wineprefix");
             }
-            env.WINEPREFIX = winePrefix;
+            spawnOptions.options.env.WINEPREFIX = winePrefix;
         }
 
         return new Promise<boolean>(resolve => {
-            const processIPA = bsmSpawn(cmd, {
-                log: BsmShellLog.Command | BsmShellLog.EnvVariables,
-                options: {
-                    cwd: versionPath,
-                    detached: true,
-                    shell: true,
-                    env
-                },
-                linux: { prefix: winePath },
-            });
+            const processIPA = bsmSpawn(
+                `"${ipaPath}" "${bsExePath}" ${args.join(" ")}`,
+                spawnOptions
+            );
 
             const timeout = setTimeout(() => {
                 log.info("Ipa process timeout");

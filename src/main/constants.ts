@@ -17,6 +17,8 @@ export const IMAGE_CACHE_PATH = path.join(CACHE_PATH, "imagescache");
 
 export const HTTP_STATUS_CODES = constants;
 
+export const COMMAND_FORMAT = "%command%";
+
 // Linux related stuff
 
 export const PROTON_BINARY_PREFIX = "proton";

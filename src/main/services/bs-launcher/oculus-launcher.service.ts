@@ -55,11 +55,11 @@ export class OculusLauncherService extends AbstractLauncherService implements St
                 obs.next({type: BSLaunchEvent.BS_LAUNCHING});
 
                 // Launch Beat Saber
-                const process = this.launchBs(
-                    exePath,
-                    buildBsLaunchArgs(launchOptions),
-                    { env }
-                );
+                const process = this.launchBs({
+                    bsExePath: exePath,
+                    args: buildBsLaunchArgs(launchOptions),
+                    options: { env },
+                });
 
                 return process.exit.catch(err => {
                     throw CustomError.fromError(err, BSLaunchError.BS_EXIT_ERROR);

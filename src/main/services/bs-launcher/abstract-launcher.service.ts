@@ -6,7 +6,7 @@ import log from "electron-log";
 import { sToMs } from "../../../shared/helpers/time.helpers";
 import { LinuxService } from "../linux.service";
 import { BsmShellLog, bsmSpawn } from "main/helpers/os.helpers";
-import { IS_FLATPAK } from "main/constants";
+import { COMMAND_FORMAT, IS_FLATPAK } from "main/constants";
 import { LaunchMods } from "shared/models/bs-launch/launch-option.interface";
 import { parseEnvString } from "main/helpers/env.helpers";
 
@@ -47,41 +47,30 @@ export abstract class AbstractLauncherService {
         this.localVersions = BSLocalVersionService.getInstance();
     }
 
-    private readonly COMMAND_FORMAT = "%command%";
+    protected launchBSProcess(params: BSLaunchParameters): ChildProcessWithoutNullStreams {
 
-    protected launchBSProcess(bsExePath: string, args: string[], options?: SpawnBsProcessOptions): ChildProcessWithoutNullStreams {
+        const spawnOptions: SpawnOptionsWithoutStdio = {
+            detached: true,
+            cwd: path.dirname(params.bsExePath),
+            ...(params.options || {})
+        };
 
-        const spawnOptions: SpawnOptionsWithoutStdio = { detached: true, cwd: path.dirname(bsExePath), ...(options || {}) };
-
-        if(args.includes("--verbose")){
+        if(params.args.includes("--verbose")){
             spawnOptions.windowsVerbatimArguments = true;
         }
 
         spawnOptions.shell = true; // For windows to spawn properly
-        return bsmSpawn(`"${bsExePath}"`, {
-            args, options: spawnOptions, log: BsmShellLog.Command,
-            linux: { prefix: options?.protonPrefix || "" },
-            flatpak: {
-                host: IS_FLATPAK,
-                env: [
-                    "SteamAppId",
-                    "SteamOverlayGameId",
-                    "SteamGameId",
-                    "WINEDLLOVERRIDES",
-                    "STEAM_COMPAT_DATA_PATH",
-                    "STEAM_COMPAT_INSTALL_PATH",
-                    "STEAM_COMPAT_CLIENT_INSTALL_PATH",
-                    "STEAM_COMPAT_APP_ID",
-                    "SteamEnv",
-                    "PROTON_LOG",
-                    "PROTON_LOG_DIR",
-                ],
-            },
+        return bsmSpawn(`"${params.bsExePath}"`, {
+            args: params.args,
+            options: spawnOptions,
+            log: BsmShellLog.Command,
+            prefix: params.prefix || "",
+            flatpak: { host: IS_FLATPAK },
         });
     }
 
-    protected launchBs(bsExePath: string, args: string[], options?: SpawnBsProcessOptions): {process: ChildProcessWithoutNullStreams, exit: Promise<number>} {
-        const process = this.launchBSProcess(bsExePath, args, options);
+    protected launchBs(params: BSLaunchParameters): {process: ChildProcessWithoutNullStreams, exit: Promise<number>} {
+        const process = this.launchBSProcess(params);
 
         let timeoutId: NodeJS.Timeout;
 
@@ -104,7 +93,7 @@ export abstract class AbstractLauncherService {
                 resolve(code);
             });
 
-            const unrefAfter = options?.unrefAfter ?? sToMs(10);
+            const unrefAfter = params.options?.unrefAfter ?? sToMs(10);
 
             timeoutId = setTimeout(() => {
                 log.error("BS process unref after timeout", unrefAfter);
@@ -129,14 +118,17 @@ export abstract class AbstractLauncherService {
         }
 
         const { command } = launchOptions;
-        const index = command.indexOf(this.COMMAND_FORMAT);
+        const index = command.indexOf(COMMAND_FORMAT);
         if (index === -1) {
             return;
         }
 
         const envString = command.substring(0, index);
-        log.info("Parsing env string ", `"${envString}"`)
-        for (const [ key, value ] of Object.entries(parseEnvString(envString))) {
+        log.info("Parsing env string ", `"${envString}"`);
+
+        const { envVars, command: newCommand } = parseEnvString(envString);
+
+        for (const [ key, value ] of Object.entries(envVars)) {
             if (key in env) {
                 log.warn("Ignoring", `${key}=${value}`, "already set env launch command");
                 continue;
@@ -146,12 +138,18 @@ export abstract class AbstractLauncherService {
             env[key] = value;
         }
 
-        launchOptions.command = command.substring(index + this.COMMAND_FORMAT.length);
+        launchOptions.command = `${newCommand} ${command.substring(index)}`;
     }
 
 }
 
 export type SpawnBsProcessOptions = {
-    protonPrefix?: string;
     unrefAfter?: number;
 } & SpawnOptionsWithoutStdio;
+
+export type BSLaunchParameters = {
+    bsExePath: string;
+    args: string[];
+    prefix?: string;
+    options?: SpawnBsProcessOptions;
+};

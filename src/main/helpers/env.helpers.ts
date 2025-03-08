@@ -1,4 +1,3 @@
-import { CustomError } from "shared/models/exceptions/custom-error.class";
 import { ProviderPlatform } from "shared/models/provider-platform.enum";
 
 export function execOnOs<T>(executions: { [key in ProviderPlatform]?: () => T }, noError = false): T {
@@ -28,11 +27,16 @@ const isAlphaCharacter = (c: string) =>
     (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
 const isNumber = (c: string) => c >= "0" && c <= "9";
 
-export function parseEnvString(envString: string): Record<string, string> {
+export function parseEnvString(envString: string): {
+    envVars: Record<string, string>;
+    // Unparseable part of the env eg HELLO=hi some-command
+    command: string;
+} {
     const envVars: Record<string, string> = {};
 
     let state: EnvParserState = EnvParserState.NAME_START;
     let index = 0;
+    let lastValidIndex = 0;
     let newName = "";
     for (let pos = 0; pos < envString.length; ++pos) {
         const c = envString[pos];
@@ -67,6 +71,7 @@ export function parseEnvString(envString: string): Record<string, string> {
                 } else if (c === " ") {
                     state = EnvParserState.NAME_START;
                     envVars[newName] = "";
+                    lastValidIndex = pos + 1;
                 } else {
                     state = EnvParserState.VALUE;
                 }
@@ -76,6 +81,7 @@ export function parseEnvString(envString: string): Record<string, string> {
                 if (c === " ") {
                     state = EnvParserState.NAME_START;
                     envVars[newName] = envString.substring(index, pos);
+                    lastValidIndex = pos + 1;
                 }
                 break;
 
@@ -83,6 +89,7 @@ export function parseEnvString(envString: string): Record<string, string> {
                 if (c === "'") {
                     state = EnvParserState.SPACE;
                     envVars[newName] = envString.substring(index, pos);
+                    lastValidIndex = pos + 1;
                 }
                 break;
 
@@ -90,12 +97,14 @@ export function parseEnvString(envString: string): Record<string, string> {
                 if (c === '"') {
                     state = EnvParserState.SPACE;
                     envVars[newName] = envString.substring(index, pos);
+                    lastValidIndex = pos + 1;
                 }
                 break;
 
             case EnvParserState.SPACE:
                 if (c === " ") {
                     state = EnvParserState.NAME_START;
+                    lastValidIndex = pos + 1;
                 } else {
                     state = EnvParserState.ERROR;
                 }
@@ -105,24 +114,17 @@ export function parseEnvString(envString: string): Record<string, string> {
         }
 
         if (state === EnvParserState.ERROR) {
-            throw new CustomError(
-                `parseEnvString failed: invalid character at position ${pos}`,
-                "generic.env.parse"
-            );
+            break;
         }
     }
 
     if (state === EnvParserState.VALUE_START || state === EnvParserState.VALUE) {
         envVars[newName] = envString.substring(index);
-        return envVars;
+        lastValidIndex = envString.length;
     }
 
-    if (state === EnvParserState.NAME_START || state === EnvParserState.SPACE) {
-        return envVars;
-    }
-
-    throw new CustomError(
-        "parseEnvString failed: invalid ending state",
-        "generic.env.parse"
-    );
+    return {
+        envVars,
+        command: envString.substring(lastValidIndex),
+    };
 }
