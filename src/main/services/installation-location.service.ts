@@ -5,6 +5,13 @@ import { tryit } from "../../shared/helpers/error.helpers";
 import { pathExistsSync } from "fs-extra";
 import { StaticConfigurationService } from "./static-configuration.service";
 
+export type SharedFolder =
+    "SharedMaps" | "CustomMaps"
+    | "CustomSabers" | "CustomPlatforms"
+    | "CustomNotes" | "UserData"
+    | "CustomWIPLevels" | "compatdata"
+    | "Playlists";
+
 export class InstallationLocationService {
     private static instance: InstallationLocationService;
 
@@ -97,8 +104,8 @@ export class InstallationLocationService {
         return path.join(this.installationDirectory(), this.VERSIONS_FOLDER);
     }
 
-    public sharedContentPath(): string {
-        return path.join(this.installationDirectory(), this.SHARED_CONTENT_FOLDER);
+    public sharedContentPath(folder?: SharedFolder): string {
+        return path.join(this.installationDirectory(), this.SHARED_CONTENT_FOLDER, folder ?? "");
     }
 
     public cachePath(): string {
