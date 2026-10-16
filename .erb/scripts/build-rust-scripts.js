@@ -23,14 +23,8 @@ rustProjects.forEach(project => {
     const target = project === 'bs-downloader' ? downloaderTarget : undefined;
     const args = ['build', '--release', '--locked'];
     if (target) { args.push('--target', target); }
-    const env = { ...process.env };
-    if (process.platform === 'linux' && target === linuxTargets[process.arch]) {
-        const targetKey = target.replaceAll('-', '_');
-        env[`CC_${targetKey}`] ||= 'gcc';
-        env[`CARGO_TARGET_${targetKey.toUpperCase()}_LINKER`] ||= 'gcc';
-    }
     console.log(`Building ${project}`);
-    execFileSync('cargo', args, { cwd, stdio: 'inherit', env });
+    execFileSync('cargo', args, { cwd, stdio: 'inherit' });
 
     const projectMetadata = execFileSync('cargo', ['metadata', '--no-deps', '--format-version', '1'], {
         cwd,
